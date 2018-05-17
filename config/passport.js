@@ -21,18 +21,18 @@ module.exports = async (passport, user) => {
   passport.serializeUser((user, done) => { // # 전략 성공시 실행되는 부분
     debug('serializeUser')
     // # deserializeUser로 값을 보냄.
-    done(null, user.id); // 여기의 user.id가 req.session.passport.user에 저장
+    utils.success(user,done);
   });
 
   // 실제 서버로 들어오는 요청마다 세션정보를 DB와 비교하는 곳
-  passport.deserializeUser((id, done) => { // 매개변수 user는 req.session.passport.user에 저장된 값
+  passport.deserializeUser((user, done) => { // 매개변수 user는 req.session.passport.user에 저장된 값
     debug('deserializeUser')
-    User.findById(id) // id를 가지고 DB를 조회한다.
+    User.findById(user.id) // id를 가지고 DB를 조회한다.
     .then((user) => { // 성공하면
-      done(null, user.get());
+      utils.success(user.get(),done);
     })
     .catch((error)=>{ // 실패하면
-      return utils.failure(`아이디 조회 ${error}`, done)
+      utils.failure(`아이디 조회 ${error}`, done)
     })
     ;
   })
@@ -50,16 +50,18 @@ module.exports = async (passport, user) => {
       }
     })
       .then(async function (user) {
-      if (!user) {
-        return utils.failure('아이디 조회',done)
-      } 
-      const userPassword = (user.get().password);
-      const result = await compareHash(password, userPassword);
-      if(result){
-        return done('로그인', user);
-      }else{
-        return utils.failure('로그인', done)
-      }
+        process.nextTick(async () => {
+          if (!user) {
+            utils.failure('아이디조회 오류', done)
+          } 
+          const userPassword = (user.get().password);
+          const result = await compareHash(password, userPassword);
+          if(result){
+            utils.success(user,done);
+          }else{
+            utils.failure('비밀번호일치 오류', done)
+          }
+        })
     })
     .catch(function (error) {
       return utils.failure(`데이터베이스 조회 실패 ${error}`, done)
@@ -73,7 +75,7 @@ module.exports = async (passport, user) => {
     passReqToCallback: true,
   }, async (req, email, password, done) => {
     if(!email){
-      return utils.failure('이메일 조회.', done)
+      return utils.failure('아이디조회 오류.', done)
     } else {
       const userPassword = await generateHash(password);
       const params = {
@@ -87,8 +89,7 @@ module.exports = async (passport, user) => {
       })
       .then(user=>{
         if(user){
-          debug('중복아이디');
-          return utils.failure('아이디 중복.', done)
+          utils.failure('중복아이디 오류', done)
         }else{
           User.create(params)
           .then(user=>{
@@ -98,12 +99,12 @@ module.exports = async (passport, user) => {
             },false)
           })
           .catch(error=>{
-            return utils.failure(error, done)
+            utils.failure(error, done)
           })
         }
       })
       .catch(error=>{
-        return utils.failure(error, done)
+        utils.failure(error, done)
       })
     }
   }))
