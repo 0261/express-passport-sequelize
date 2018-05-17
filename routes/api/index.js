@@ -3,19 +3,32 @@ const router = require('express').Router();
 const bodyParser = require('body-parser').json(); // For POST
 const session = require('express-session'); // Session
 const passport = require('passport'); // Passport
-const cors = require('cors'); // CORS
-const models = require("../../app/models"); // require Sequelize Models
+const models = require("../../app/models"); // require Users Table
 const cookieParser = require('cookie-parser'); // Cookies
-require('../../config/passport.js')(passport, models.user); // PASSPORT Init
+
+router.use(function (req, res, next) {
+    res.header('Access-Control-Allow-Credentials', true);
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+    res.header('Access-Control-Allow-Headers', 'X-Requested-With, X-HTTP-Method-Override, Content-Type, Accept');
+    if ('OPTIONS' == req.method) {
+        res.send(200);
+    } else {
+        next();
+    }
+}); // CORS
 
 router.use(cookieParser()); // Cookies
-router.use(cors()) // CORS
 router.use(bodyParser) // Parsing Post Data
 router.use(session({ // Activate Session
     secret: 'goal',
     resave: true,
-    saveUninitialized: false
-}))
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 60000,
+    }
+}));
+require('../../config/passport.js')(passport, models.user); // PASSPORT Init
 router.use(passport.initialize()); // Passport Start
 router.use(passport.session()); // Connect Session
 //Sync Database
