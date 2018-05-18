@@ -46,7 +46,7 @@ router.get('/signup',(req,res,error)=>{
 })
 
 // GET /api/auth/signout 로그아웃 - 세션파괴
-router.get('/signout',middle.authenticate,ctrl.signOut)
+router.get('/signout',ctrl.signOut)
 router.get('/get', middle.authenticate,ctrl.getItem);
 
 module.exports = router;
